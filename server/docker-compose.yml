@@ -1,0 +1,66 @@
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/rules:/etc/prometheus/rules:ro
+      - ./prometheus/targets:/etc/prometheus/targets:ro
+      - prom_data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - wallet-exporter
+      - reward-exporter
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - graf_data:/var/lib/grafana
+      - ../grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  wallet-exporter:
+    build: ./wallet-exporter
+    environment:
+      # Wallet addresses (comma-separated)
+      - WALLET_ADDRESSES=${WALLET_ADDRESSES:-}
+      # sITX Token Contract (Scroll)
+      - SITX_CONTRACT=${SITX_CONTRACT:-0xc0579287f3CDE6BF796BE6E2bB61DbB06DA85024}
+      # Scroll RPC URL
+      - SCROLL_RPC_URL=${SCROLL_RPC_URL:-https://rpc.scroll.io}
+      # Update interval (seconds)
+      - UPDATE_INTERVAL=${UPDATE_INTERVAL:-3600}
+    ports:
+      - "9101:9101"
+    restart: unless-stopped
+
+  reward-exporter:
+    build: ./reward-exporter
+    environment:
+      # Node config: "name:user@host:cli_dir:spend_key_file" (comma-separated)
+      - NODES_CONFIG=${NODES_CONFIG:-}
+      # Update interval (seconds)
+      - UPDATE_INTERVAL=${REWARD_UPDATE_INTERVAL:-3600}
+      # SSH key path (inside container)
+      - SSH_KEY_PATH=/root/.ssh/id_ed25519
+    volumes:
+      # Mount host SSH keys
+      - ~/.ssh/id_ed25519:/root/.ssh/id_ed25519:ro
+      - ~/.ssh/known_hosts:/root/.ssh/known_hosts:ro
+    ports:
+      - "9102:9102"
+    restart: unless-stopped
+
+volumes:
+  prom_data:
+  graf_data:

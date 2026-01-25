@@ -1,0 +1,62 @@
+groups:
+- name: intmax
+  rules:
+  # Builder is stopped
+  - alert: INTMAXBuilderNotReady
+    expr: intmax_builder_ready == 0
+    for: 10m
+    labels:
+      severity: critical
+    annotations:
+      summary: "INTMAX Builder is not running on {{ $labels.node }}"
+      description: "Builder has been stopped for more than 10 minutes"
+
+  # Wallet ETH balance is low (for gas)
+  - alert: INTMAXWalletLowBalance
+    expr: intmax_wallet_eth < 0.001
+    for: 1h
+    labels:
+      severity: warning
+    annotations:
+      summary: "Low wallet ETH balance on {{ $labels.address }}"
+      description: "Wallet ETH balance is {{ $value }} ETH, which may not be enough for gas fees"
+
+  # Wallet ETH balance is critically low
+  - alert: INTMAXWalletCriticalBalance
+    expr: intmax_wallet_eth < 0.0001
+    for: 30m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Critical wallet ETH balance on {{ $labels.address }}"
+      description: "Wallet ETH balance is critically low at {{ $value }} ETH"
+
+  # sITX balance is accumulating
+  - alert: INTMAXHighSITXBalance
+    expr: intmax_wallet_sitx > 1000
+    for: 24h
+    labels:
+      severity: info
+    annotations:
+      summary: "High sITX balance on {{ $labels.address }}"
+      description: "sITX balance is {{ $value }}, consider claiming rewards"
+
+  # Reward balance is accumulating
+  - alert: INTMAXHighRewardBalance
+    expr: intmax_builder_reward_eth > 0.1
+    for: 24h
+    labels:
+      severity: info
+    annotations:
+      summary: "High reward balance on {{ $labels.node }}"
+      description: "Reward balance is {{ $value }} ETH, consider withdrawing"
+
+  # Reward check has not run for a long time
+  - alert: INTMAXRewardCheckStale
+    expr: time() - intmax_builder_reward_last_check > 7200
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Reward check is stale"
+      description: "Last reward check was {{ $value | humanizeDuration }} ago"
