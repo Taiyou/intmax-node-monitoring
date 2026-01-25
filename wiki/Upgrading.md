@@ -1,237 +1,237 @@
-# Upgrading Guide
+# アップグレードガイド
 
-This document describes how to upgrade the INTMAX Node Monitoring system.
+このドキュメントでは、INTMAX Node Monitoringシステムのアップグレード方法を説明します。
 
 ---
 
-## Before You Upgrade
+## アップグレード前に
 
-### Backup Your Data
+### データをバックアップ
 
-Always create backups before upgrading:
+アップグレード前に必ずバックアップを作成：
 
 ```bash
-# Backup configuration files
+# 設定ファイルをバックアップ
 cp server/.env server/.env.backup
 cp server/prometheus/targets/builders.yml server/prometheus/targets/builders.yml.backup
 
-# Backup Grafana dashboards (if customized)
+# Grafanaダッシュボードをバックアップ（カスタマイズしている場合）
 cp -r grafana/dashboards grafana/dashboards.backup
 
-# Optional: Backup Prometheus data
+# オプション：Prometheusデータをバックアップ
 docker compose exec prometheus tar -czf /tmp/prom-backup.tar.gz /prometheus
 docker compose cp prometheus:/tmp/prom-backup.tar.gz ./prom-backup.tar.gz
 ```
 
-### Check Current Version
+### 現在のバージョンを確認
 
 ```bash
-# Check the current commit
+# 現在のコミットを確認
 git log -1 --oneline
 
-# Check running Docker images
+# 実行中のDockerイメージを確認
 docker compose images
 ```
 
 ---
 
-## Upgrade Methods
+## アップグレード方法
 
-### Method 1: Git Pull (Recommended)
+### 方法1: Git Pull（推奨）
 
-For most upgrades:
+ほとんどのアップグレードの場合：
 
 ```bash
-cd intmax-node-monitoring-en
+cd intmax-node-monitoring
 
-# Fetch latest changes
+# 最新の変更を取得
 git fetch origin
 
-# Check what changed
+# 変更内容を確認
 git log HEAD..origin/main --oneline
 
-# Pull changes
+# 変更をプル
 git pull origin main
 
-# Rebuild and restart services
+# サービスを再ビルドして再起動
 docker compose down
 docker compose build --no-cache
 docker compose up -d
 ```
 
-### Method 2: Fresh Installation
+### 方法2: 新規インストール
 
-For major version upgrades or if you encounter issues:
+メジャーバージョンアップグレードや問題が発生した場合：
 
 ```bash
-# Save current configuration
+# 現在の設定を保存
 cp server/.env /tmp/.env.backup
 cp server/prometheus/targets/builders.yml /tmp/builders.yml.backup
 
-# Remove old installation
+# 古いインストールを削除
 cd ..
-rm -rf intmax-node-monitoring-en
+rm -rf intmax-node-monitoring
 
-# Clone fresh copy
-git clone https://github.com/Taiyou/intmax-node-monitoring-en.git
-cd intmax-node-monitoring-en/server
+# 新しいコピーをクローン
+git clone https://github.com/Taiyou/intmax-node-monitoring.git
+cd intmax-node-monitoring/server
 
-# Restore configuration
+# 設定を復元
 cp /tmp/.env.backup .env
 cp /tmp/builders.yml.backup prometheus/targets/builders.yml
 
-# Start services
+# サービスを起動
 docker compose up -d
 ```
 
 ---
 
-## Upgrading Components
+## コンポーネントのアップグレード
 
-### Upgrading the Monitoring Server
+### 監視サーバーのアップグレード
 
 ```bash
-cd intmax-node-monitoring-en
+cd intmax-node-monitoring
 
-# Stop services
+# サービスを停止
 docker compose down
 
-# Pull latest code
+# 最新コードをプル
 git pull origin main
 
-# Pull latest Docker images
+# 最新Dockerイメージをプル
 docker compose pull
 
-# Rebuild custom images (exporters)
+# カスタムイメージ（exporter）を再ビルド
 docker compose build --no-cache
 
-# Start services
+# サービスを起動
 docker compose up -d
 
-# Verify services are running
+# サービスが実行中か確認
 docker compose ps
 docker compose logs -f --tail=100
 ```
 
-### Upgrading Node Agents
+### ノードエージェントのアップグレード
 
-Run on each monitored node:
+各監視対象ノードで実行：
 
 ```bash
-# Method A: Re-run installation script
-curl -fsSL https://raw.githubusercontent.com/Taiyou/intmax-node-monitoring-en/main/agent/setup.sh | sudo bash
+# 方法A：インストールスクリプトを再実行
+curl -fsSL https://raw.githubusercontent.com/Taiyou/intmax-node-monitoring/main/agent/setup.sh | sudo bash
 
-# Method B: Manual update
+# 方法B：手動更新
 cd /tmp
-git clone https://github.com/Taiyou/intmax-node-monitoring-en.git
-sudo cp intmax-node-monitoring-en/agent/intmax_builder_metrics.sh /usr/local/bin/
+git clone https://github.com/Taiyou/intmax-node-monitoring.git
+sudo cp intmax-node-monitoring/agent/intmax_builder_metrics.sh /usr/local/bin/
 sudo chmod +x /usr/local/bin/intmax_builder_metrics.sh
-rm -rf intmax-node-monitoring-en
+rm -rf intmax-node-monitoring
 ```
 
-Verify the agent is working:
+エージェントの動作を確認：
 ```bash
 curl localhost:9100/metrics | grep intmax_builder
 ```
 
-### Upgrading Prometheus
+### Prometheusのアップグレード
 
-If updating Prometheus to a new version, check compatibility:
+Prometheusを新しいバージョンに更新する場合、互換性を確認：
 
 ```bash
-# Check current version
+# 現在のバージョンを確認
 docker compose exec prometheus prometheus --version
 
-# Update docker-compose.yml to new version
+# docker-compose.ymlを新しいバージョンに更新
 # prom/prometheus:v2.45.0 -> prom/prometheus:v2.50.0
 
-# Restart with new version
+# 新しいバージョンで再起動
 docker compose down
 docker compose pull prometheus
 docker compose up -d
 ```
 
-### Upgrading Grafana
+### Grafanaのアップグレード
 
 ```bash
-# Check current version
+# 現在のバージョンを確認
 docker compose exec grafana grafana-server -v
 
-# Update docker-compose.yml to new version
+# docker-compose.ymlを新しいバージョンに更新
 # grafana/grafana:10.0.0 -> grafana/grafana:10.3.0
 
-# Restart with new version
+# 新しいバージョンで再起動
 docker compose down
 docker compose pull grafana
 docker compose up -d
 ```
 
-**Note:** Grafana upgrades may require database migrations. Check logs after upgrade:
+**注意:** Grafanaのアップグレードにはデータベースマイグレーションが必要な場合があります。アップグレード後にログを確認：
 ```bash
 docker compose logs grafana | grep -i migration
 ```
 
 ---
 
-## Post-Upgrade Verification
+## アップグレード後の確認
 
-### Verify Services
+### サービスの確認
 
 ```bash
-# Check all containers are running
+# すべてのコンテナが実行中か確認
 docker compose ps
 
-# Check Prometheus targets
+# Prometheusターゲットを確認
 curl localhost:9090/api/v1/targets | jq '.data.activeTargets[].health'
 
-# Check Grafana is accessible
+# Grafanaがアクセス可能か確認
 curl -s localhost:3000/api/health | jq
 ```
 
-### Verify Metrics
+### メトリクスの確認
 
 ```bash
-# Check node metrics
+# ノードメトリクスを確認
 curl localhost:9090/api/v1/query?query=intmax_builder_up | jq
 
-# Check wallet metrics
+# ウォレットメトリクスを確認
 curl localhost:9090/api/v1/query?query=intmax_wallet_eth | jq
 
-# Check reward metrics
+# 報酬メトリクスを確認
 curl localhost:9090/api/v1/query?query=intmax_builder_reward_eth | jq
 ```
 
-### Verify Dashboard
+### ダッシュボードの確認
 
-1. Open Grafana at http://localhost:3000
-2. Navigate to **Dashboards** > **INTMAX Builders Overview**
-3. Verify all panels are displaying data
-4. Check that historical data is preserved
+1. Grafanaを開く: http://localhost:3000
+2. **Dashboards** > **INTMAX Builders Overview** に移動
+3. すべてのパネルがデータを表示しているか確認
+4. 履歴データが保持されているか確認
 
 ---
 
-## Rollback
+## ロールバック
 
-If the upgrade causes issues:
+アップグレードで問題が発生した場合：
 
-### Rollback Code Changes
+### コード変更のロールバック
 
 ```bash
-# Find the previous commit
+# 以前のコミットを探す
 git log --oneline -10
 
-# Revert to previous commit
+# 以前のコミットに戻る
 git checkout <previous-commit-hash>
 
-# Restart services
+# サービスを再起動
 docker compose down
 docker compose up -d
 ```
 
-### Rollback Docker Images
+### Dockerイメージのロールバック
 
 ```bash
-# Specify exact versions in docker-compose.yml
+# docker-compose.ymlで正確なバージョンを指定
 # image: prom/prometheus:v2.45.0
 # image: grafana/grafana:10.0.0
 
@@ -239,111 +239,111 @@ docker compose down
 docker compose up -d
 ```
 
-### Restore from Backup
+### バックアップからの復元
 
 ```bash
-# Restore configuration
+# 設定を復元
 cp server/.env.backup server/.env
 cp server/prometheus/targets/builders.yml.backup server/prometheus/targets/builders.yml
 
-# Restart
+# 再起動
 docker compose down && docker compose up -d
 ```
 
 ---
 
-## Version-Specific Notes
+## バージョン固有の注意事項
 
-### v1.0.0 to v1.1.0
+### v1.0.0からv1.1.0
 
-*(Example - update when releasing new versions)*
+*（例 - 新バージョンリリース時に更新）*
 
-**Breaking Changes:**
-- None
+**破壊的変更:**
+- なし
 
-**New Features:**
-- Added new metrics for container memory usage
-- Improved dashboard with additional panels
+**新機能:**
+- コンテナメモリ使用量の新メトリクス追加
+- 追加パネルでダッシュボードを改善
 
-**Migration Steps:**
-1. Pull latest code
-2. Restart services
-3. Import new dashboard (optional)
+**移行手順:**
+1. 最新コードをプル
+2. サービスを再起動
+3. 新しいダッシュボードをインポート（オプション）
 
 ---
 
-## Upgrading from Custom Forks
+## カスタムフォークからのアップグレード
 
-If you've made local modifications:
+ローカルで変更を加えている場合：
 
 ```bash
-# Save your changes to a branch
+# 変更をブランチに保存
 git checkout -b my-customizations
 git add .
 git commit -m "My customizations"
 
-# Update main branch
+# メインブランチを更新
 git checkout main
 git pull origin main
 
-# Merge your changes
+# 変更をマージ
 git checkout my-customizations
 git rebase main
 
-# Resolve any conflicts and continue
-# Then deploy from your branch
+# コンフリクトを解決して続行
+# その後、自分のブランチからデプロイ
 ```
 
 ---
 
-## Troubleshooting Upgrades
+## アップグレードのトラブルシューティング
 
-### Prometheus Won't Start
+### Prometheusが起動しない
 
-Check for configuration errors:
+設定エラーを確認：
 ```bash
 docker compose logs prometheus | grep -i error
 docker compose exec prometheus promtool check config /etc/prometheus/prometheus.yml
 ```
 
-### Grafana Dashboard Missing
+### Grafanaダッシュボードが見つからない
 
-Re-provision dashboards:
+ダッシュボードを再プロビジョニング：
 ```bash
 docker compose restart grafana
 ```
 
-Or manually import:
-1. Open Grafana
-2. Go to **Dashboards** > **Import**
-3. Upload `grafana/dashboards/intmax-builders-overview.json`
+または手動でインポート：
+1. Grafanaを開く
+2. **Dashboards** > **Import** に移動
+3. `grafana/dashboards/intmax-builders-overview.json`をアップロード
 
-### Metrics Not Updating
+### メトリクスが更新されない
 
-Check exporter logs:
+exporterログを確認：
 ```bash
 docker compose logs wallet-exporter
 docker compose logs reward-exporter
 ```
 
-Check Prometheus targets:
+Prometheusターゲットを確認：
 ```bash
 curl localhost:9090/api/v1/targets | jq '.data.activeTargets[] | {job: .labels.job, health: .health}'
 ```
 
-### Agent Not Sending Metrics
+### エージェントがメトリクスを送信しない
 
-On the node:
+ノード上で：
 ```bash
-# Check cron job
+# cronジョブを確認
 crontab -l | grep intmax
 
-# Run metrics script manually
+# メトリクススクリプトを手動実行
 sudo /usr/local/bin/intmax_builder_metrics.sh
 
-# Check output file
+# 出力ファイルを確認
 cat /var/lib/node_exporter/textfile_collector/intmax_builder.prom
 
-# Check node_exporter status
+# node_exporterの状態を確認
 sudo systemctl status node_exporter
 ```

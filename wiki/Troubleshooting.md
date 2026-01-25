@@ -1,114 +1,114 @@
-# Troubleshooting & FAQ
+# トラブルシューティング & FAQ
 
-## Frequently Asked Questions (FAQ)
+## よくある質問（FAQ）
 
-### General Questions
+### 一般的な質問
 
-**Q: What is the minimum system requirement for the monitoring server?**
+**Q: 監視サーバーの最小システム要件は？**
 
-A: For the monitoring server:
-- CPU: 2 cores
-- RAM: 2GB (4GB recommended)
-- Storage: 10GB+ (depends on retention period)
-- Docker and Docker Compose installed
+A: 監視サーバーの場合：
+- CPU: 2コア
+- RAM: 2GB（4GB推奨）
+- ストレージ: 10GB以上（保持期間による）
+- DockerとDocker Composeがインストール済み
 
-**Q: Can I run the monitoring server on the same machine as Block Builder?**
+**Q: 監視サーバーをBlock Builderと同じマシンで実行できますか？**
 
-A: Yes, but it's not recommended for production. The monitoring server adds additional resource usage, which may affect Block Builder performance. For testing purposes, it's fine.
+A: はい、ただし本番環境では推奨しません。監視サーバーは追加のリソースを使用するため、Block Builderのパフォーマンスに影響する可能性があります。テスト目的であれば問題ありません。
 
-**Q: How long is the data retained?**
+**Q: データはどのくらい保持されますか？**
 
-A: By default, Prometheus retains data for 90 days. You can adjust this by setting `PROMETHEUS_RETENTION` in the `.env` file:
+A: デフォルトでは、Prometheusは90日間データを保持します。`.env`ファイルで`PROMETHEUS_RETENTION`を設定して調整できます：
 ```bash
-PROMETHEUS_RETENTION=30d   # 30 days
-PROMETHEUS_RETENTION=90d   # 90 days (default)
-PROMETHEUS_RETENTION=180d  # 180 days
+PROMETHEUS_RETENTION=30d   # 30日
+PROMETHEUS_RETENTION=90d   # 90日（デフォルト）
+PROMETHEUS_RETENTION=180d  # 180日
 ```
 
-**Q: Can I monitor nodes on different networks (different subnets)?**
+**Q: 異なるネットワーク（異なるサブネット）のノードを監視できますか？**
 
-A: Yes, as long as the monitoring server can reach the nodes on port 9100. You may need to configure firewall rules or use a VPN for nodes in different networks.
+A: はい、監視サーバーがポート9100でノードに到達できる限り可能です。異なるネットワークのノードにはファイアウォールルールの設定やVPNの使用が必要な場合があります。
 
-**Q: Do I need to restart services after configuration changes?**
+**Q: 設定変更後にサービスを再起動する必要がありますか？**
 
-A: Yes. After modifying `.env` or `builders.yml`, restart the services:
+A: はい。`.env`や`builders.yml`を変更した後、サービスを再起動してください：
 ```bash
 docker compose down && docker compose up -d
 ```
 
-### Reward Monitoring
+### 報酬監視
 
-**Q: Why do I need SSH access for reward monitoring?**
+**Q: 報酬監視にSSHアクセスが必要なのはなぜですか？**
 
-A: The reward exporter needs to run the INTMAX CLI `balance` command on each node to retrieve pending rewards. This requires SSH access to execute the command remotely.
+A: reward exporterは、保留中の報酬を取得するために各ノードでINTMAX CLIの`balance`コマンドを実行する必要があります。これにはコマンドをリモートで実行するためのSSHアクセスが必要です。
 
-**Q: Is it safe to store the spend-key on the node?**
+**Q: spend-keyをノードに保存しても安全ですか？**
 
-A: The spend-key is only used for checking balances and claiming rewards. It cannot be used to transfer funds elsewhere. However, follow these security practices:
-- Set appropriate file permissions (`chmod 644`)
-- Restrict SSH access with key-based authentication
-- See [Security Best Practices](Security) for more details
+A: spend-keyは残高確認と報酬請求にのみ使用されます。他の場所への資金移動には使用できません。ただし、以下のセキュリティプラクティスに従ってください：
+- 適切なファイル権限を設定（`chmod 644`）
+- 鍵ベースの認証でSSHアクセスを制限
+- 詳細は[セキュリティベストプラクティス](Security)を参照
 
-**Q: Can I claim rewards automatically?**
+**Q: 報酬を自動で請求できますか？**
 
-A: Yes, you can set up automatic reward claiming using the `claim_rewards.sh` script with cron. See [Rewards](Rewards) for configuration details.
+A: はい、`claim_rewards.sh`スクリプトとcronを使用して自動報酬請求を設定できます。設定の詳細は[報酬](Rewards)を参照してください。
 
-### Dashboard & Visualization
+### ダッシュボードと可視化
 
-**Q: Why does the dashboard show "No data"?**
+**Q: ダッシュボードに「No data」と表示されるのはなぜですか？**
 
-A: This usually means:
-1. Prometheus cannot reach the nodes (check `builders.yml` configuration)
-2. node_exporter is not running on the target nodes
-3. Firewall is blocking port 9100
+A: これは通常以下を意味します：
+1. Prometheusがノードに到達できない（`builders.yml`の設定を確認）
+2. node_exporterが対象ノードで実行されていない
+3. ファイアウォールがポート9100をブロックしている
 
-Check Prometheus targets at http://localhost:9090/targets
+http://localhost:9090/targets でPrometheusターゲットを確認してください。
 
-**Q: Can I create custom dashboards?**
+**Q: カスタムダッシュボードを作成できますか？**
 
-A: Yes, you can create custom dashboards in Grafana. The existing dashboard is a starting point. Export your custom dashboards as JSON and place them in `grafana/dashboards/` for persistence.
+A: はい、Grafanaでカスタムダッシュボードを作成できます。既存のダッシュボードは出発点です。カスタムダッシュボードをJSONとしてエクスポートし、`grafana/dashboards/`に配置して永続化できます。
 
-**Q: How do I change the dashboard refresh interval?**
+**Q: ダッシュボードの更新間隔を変更するには？**
 
-A: In Grafana, click the refresh icon in the top-right corner and select your preferred interval (e.g., 5s, 10s, 30s, 1m).
+A: Grafanaで、右上の更新アイコンをクリックして希望の間隔（5秒、10秒、30秒、1分など）を選択します。
 
 ---
 
-## 404 Error During Installation
+## インストール時の404エラー
 
-### Symptom
+### 症状
 ```
 curl: (22) The requested URL returned error: 404
 ```
 
-### Cause
-GitHub CDN cache not updated
+### 原因
+GitHub CDNキャッシュが更新されていない
 
-### Solution
+### 解決策
 
-**Method 1: Use git clone**
+**方法1: git cloneを使用**
 ```bash
-git clone https://github.com/Taiyou/intmax-node-monitoring-en.git /tmp/intmax-monitoring
+git clone https://github.com/Taiyou/intmax-node-monitoring.git /tmp/intmax-monitoring
 cd /tmp/intmax-monitoring/agent
 sudo ./install.sh
 ```
 
-**Method 2: Wait and retry**
+**方法2: 待ってから再試行**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Taiyou/intmax-node-monitoring-en/main/agent/setup.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/Taiyou/intmax-node-monitoring/main/agent/setup.sh | sudo bash
 ```
 
 ---
 
-## Metrics Not Being Collected
+## メトリクスが収集されない
 
-### Check if node_exporter is running
+### node_exporterが実行中か確認
 ```bash
 sudo systemctl status node_exporter
 curl localhost:9100/metrics | head
 ```
 
-### Check firewall
+### ファイアウォールを確認
 ```bash
 sudo ufw status
 sudo ufw allow 9100/tcp
@@ -116,59 +116,59 @@ sudo ufw allow 9100/tcp
 
 ---
 
-## "No data" in Grafana
+## Grafanaで「No data」
 
-### Check if Prometheus can connect to nodes
+### PrometheusがノードにConnect可能か確認
 Prometheus UI (http://localhost:9090) → Status → Targets
 
-### Check if builders.yml IPs are correct
+### builders.ymlのIPが正しいか確認
 ```bash
 cat server/prometheus/targets/builders.yml
 ```
 
 ---
 
-## Docker Container Not Detected
+## Dockerコンテナが検出されない
 
-### Check container name
+### コンテナ名を確認
 ```bash
 docker ps --format '{{.Names}}'
 ```
 
-### Update BUILDER_CONTAINER_NAME in config
+### 設定のBUILDER_CONTAINER_NAMEを更新
 ```bash
 sudo nano /etc/default/intmax-builder-metrics
-# BUILDER_CONTAINER_NAME="actual container name prefix"
+# BUILDER_CONTAINER_NAME="実際のコンテナ名プレフィックス"
 ```
 
 ---
 
-## SSH Connection Error (Reward Monitoring)
+## SSH接続エラー（報酬監視）
 
-### Check if public key is registered
+### 公開鍵が登録されているか確認
 ```bash
-# SSH manually from monitoring server
+# 監視サーバーから手動でSSH
 ssh user@192.168.1.10
 
-# Check on node side
+# ノード側で確認
 cat ~/.ssh/authorized_keys
 ```
 
-### Add to known_hosts
+### known_hostsに追加
 ```bash
 ssh-keyscan 192.168.1.10 >> ~/.ssh/known_hosts
 ```
 
 ---
 
-## spend-key Related Errors
+## spend-key関連のエラー
 
-### Check if file exists
+### ファイルが存在するか確認
 ```bash
 ls -la /etc/intmax-builder/spend-key
 ```
 
-### Check permissions
+### 権限を確認
 ```bash
 sudo chmod 644 /etc/intmax-builder/spend-key
 sudo chown $USER:$USER /etc/intmax-builder/spend-key
@@ -176,16 +176,16 @@ sudo chown $USER:$USER /etc/intmax-builder/spend-key
 
 ---
 
-## Services Not Starting After Reboot
+## 再起動後にサービスが起動しない
 
-### Check Docker services
+### Dockerサービスを確認
 ```bash
 cd server
 docker compose ps
 docker compose up -d
 ```
 
-### Check node_exporter
+### node_exporterを確認
 ```bash
 sudo systemctl enable node_exporter
 sudo systemctl start node_exporter
@@ -193,20 +193,20 @@ sudo systemctl start node_exporter
 
 ---
 
-## Block Builder Setup Issues
+## Block Builderセットアップの問題
 
-### uuidgen not found
+### uuidgenが見つからない
 
 ```
 ❌ Missing required tools: uuidgen
 ```
 
-**Solution:**
+**解決策:**
 ```bash
 sudo apt install -y uuid-runtime
 ```
 
-### Mainnet/Testnet Mismatch
+### Mainnet/Testnetの不一致
 
 ```
 🚨 NETWORK MISMATCH DETECTED!
@@ -214,9 +214,9 @@ Expected: Chain ID 534351 (Scroll Sepolia Testnet)
 Actual: Chain ID 534352
 ```
 
-**Solution:**
+**解決策:**
 
-For Mainnet operation, download the Mainnet script:
+Mainnet運用の場合、Mainnetスクリプトをダウンロード：
 ```bash
 curl -o builder.sh https://raw.githubusercontent.com/InternetMaximalism/intmax2/refs/heads/main/scripts/block-builder-mainnet.sh
 chmod +x builder.sh
@@ -225,27 +225,27 @@ chmod +x builder.sh
 
 ---
 
-## CLI Build Errors
+## CLIビルドエラー
 
-### OpenSSL not found
+### OpenSSLが見つからない
 
 ```
 Could not find directory of OpenSSL installation
 ```
 
-**Solution:**
+**解決策:**
 ```bash
 sudo apt install -y libssl-dev pkg-config
 cargo build -r
 ```
 
-### Build tools missing
+### ビルドツールが不足
 
 ```
 error: linker `cc` not found
 ```
 
-**Solution:**
+**解決策:**
 ```bash
 sudo apt install -y build-essential
 cargo build -r
@@ -253,52 +253,52 @@ cargo build -r
 
 ---
 
-## Diagnostic Commands
+## 診断コマンド
 
-Use these commands to quickly diagnose common issues:
+一般的な問題を素早く診断するためのコマンド：
 
-### Check Overall System Status
+### システム全体の状態を確認
 
 ```bash
-# On monitoring server
-docker compose ps                    # Check service status
-docker compose logs -f               # View all logs
-curl localhost:9090/-/healthy        # Prometheus health
-curl localhost:3000/api/health       # Grafana health
+# 監視サーバー上で
+docker compose ps                    # サービス状態を確認
+docker compose logs -f               # すべてのログを表示
+curl localhost:9090/-/healthy        # Prometheusヘルス
+curl localhost:3000/api/health       # Grafanaヘルス
 
-# On each node
-sudo systemctl status node_exporter  # node_exporter status
-curl localhost:9100/metrics | grep intmax  # Check custom metrics
+# 各ノード上で
+sudo systemctl status node_exporter  # node_exporter状態
+curl localhost:9100/metrics | grep intmax  # カスタムメトリクスを確認
 ```
 
-### Network Connectivity Test
+### ネットワーク接続テスト
 
 ```bash
-# From monitoring server to node
-nc -zv <node-ip> 9100               # Test port connectivity
-curl http://<node-ip>:9100/metrics  # Fetch metrics directly
+# 監視サーバーからノードへ
+nc -zv <node-ip> 9100               # ポート接続テスト
+curl http://<node-ip>:9100/metrics  # メトリクスを直接取得
 ```
 
-### SSH Connection Test (for Reward Monitoring)
+### SSH接続テスト（報酬監視用）
 
 ```bash
-# Test SSH access
+# SSHアクセスをテスト
 ssh -v user@<node-ip> "echo 'SSH works'"
 
-# Test CLI command
+# CLIコマンドをテスト
 ssh user@<node-ip> "cd /path/to/intmax2/cli && ./target/release/intmax2-cli balance --private-key \$(cat /etc/intmax-builder/spend-key)"
 ```
 
 ---
 
-## Getting Help
+## ヘルプを得る
 
-If you're still experiencing issues:
+まだ問題が解決しない場合：
 
-1. Check the [GitHub Issues](https://github.com/Taiyou/intmax-node-monitoring-en/issues) for known problems
-2. Search existing issues before creating a new one
-3. When reporting an issue, include:
-   - Operating system and version
-   - Docker and Docker Compose versions
-   - Relevant log output
-   - Steps to reproduce the issue
+1. [GitHub Issues](https://github.com/Taiyou/intmax-node-monitoring/issues)で既知の問題を確認
+2. 新しいイシューを作成する前に既存のイシューを検索
+3. イシューを報告する際は以下を含めてください：
+   - オペレーティングシステムとバージョン
+   - DockerとDocker Composeのバージョン
+   - 関連するログ出力
+   - 問題を再現する手順

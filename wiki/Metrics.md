@@ -1,60 +1,60 @@
-# Metrics Reference
+# メトリクスリファレンス
 
-This document provides a complete reference of all metrics collected by the INTMAX Node Monitoring system.
-
----
-
-## Metrics Overview
-
-| Source | Endpoint | Update Interval | Purpose |
-|--------|----------|-----------------|---------|
-| Node Agent | `:9100/metrics` | 1-5 min (cron) | Node and container status |
-| Wallet Exporter | `:9101/metrics` | 1 hour | Wallet balances |
-| Reward Exporter | `:9102/metrics` | 1 hour | Pending rewards |
+このドキュメントでは、INTMAX Node Monitoringシステムが収集するすべてのメトリクスの完全なリファレンスを提供します。
 
 ---
 
-## Node Agent Metrics
+## メトリクス概要
 
-These metrics are collected by the `intmax_builder_metrics.sh` script running on each Block Builder node.
+| ソース | エンドポイント | 更新間隔 | 目的 |
+|--------|---------------|----------|------|
+| ノードエージェント | `:9100/metrics` | 1〜5分（cron） | ノードとコンテナの状態 |
+| Wallet Exporter | `:9101/metrics` | 1時間 | ウォレット残高 |
+| Reward Exporter | `:9102/metrics` | 1時間 | 保留中の報酬 |
+
+---
+
+## ノードエージェントメトリクス
+
+これらのメトリクスは、各Block Builderノードで実行される`intmax_builder_metrics.sh`スクリプトによって収集されます。
 
 ### intmax_builder_up
 
-**Type:** Gauge
+**タイプ:** Gauge
 
-**Description:** Indicates whether the node is being monitored (always 1 when agent is running).
+**説明:** ノードが監視されているかどうかを示します（エージェント実行中は常に1）。
 
-**Labels:**
-- `node`: Node name from configuration
+**ラベル:**
+- `node`: 設定からのノード名
 
-**Example:**
+**例:**
 ```
 intmax_builder_up{node="builder-01"} 1
 ```
 
-**Usage:** Use this to verify the agent is running on each node.
+**使用方法:** 各ノードでエージェントが実行されていることを確認するために使用。
 
 ---
 
 ### intmax_builder_container_running
 
-**Type:** Gauge
+**タイプ:** Gauge
 
-**Description:** Docker container status for the Block Builder.
+**説明:** Block BuilderのDockerコンテナ状態。
 
-**Values:**
-- `1`: Container is running
-- `0`: Container is not running
+**値:**
+- `1`: コンテナが実行中
+- `0`: コンテナが実行されていない
 
-**Labels:**
-- `node`: Node name from configuration
+**ラベル:**
+- `node`: 設定からのノード名
 
-**Example:**
+**例:**
 ```
 intmax_builder_container_running{node="builder-01"} 1
 ```
 
-**Alert Example:**
+**アラート例:**
 ```yaml
 - alert: INTMAXBuilderNotReady
   expr: intmax_builder_container_running == 0
@@ -67,18 +67,18 @@ intmax_builder_container_running{node="builder-01"} 1
 
 ### intmax_builder_process_running
 
-**Type:** Gauge
+**タイプ:** Gauge
 
-**Description:** Block Builder process status (checked via `pgrep`).
+**説明:** Block Builderプロセス状態（`pgrep`で確認）。
 
-**Values:**
-- `1`: Process is running
-- `0`: Process is not running
+**値:**
+- `1`: プロセスが実行中
+- `0`: プロセスが実行されていない
 
-**Labels:**
-- `node`: Node name from configuration
+**ラベル:**
+- `node`: 設定からのノード名
 
-**Example:**
+**例:**
 ```
 intmax_builder_process_running{node="builder-01"} 1
 ```
@@ -87,24 +87,24 @@ intmax_builder_process_running{node="builder-01"} 1
 
 ### intmax_builder_health_ok
 
-**Type:** Gauge
+**タイプ:** Gauge
 
-**Description:** Health endpoint check result (if configured).
+**説明:** ヘルスエンドポイントチェック結果（設定されている場合）。
 
-**Values:**
-- `1`: Health check passed (HTTP 2xx response)
-- `0`: Health check failed
+**値:**
+- `1`: ヘルスチェック成功（HTTP 2xxレスポンス）
+- `0`: ヘルスチェック失敗
 
-**Labels:**
-- `node`: Node name from configuration
+**ラベル:**
+- `node`: 設定からのノード名
 
-**Example:**
+**例:**
 ```
 intmax_builder_health_ok{node="builder-01"} 1
 ```
 
-**Configuration:**
-Set `BUILDER_HEALTH_URL` in `/etc/default/intmax-builder-metrics`:
+**設定:**
+`/etc/default/intmax-builder-metrics`で`BUILDER_HEALTH_URL`を設定：
 ```bash
 BUILDER_HEALTH_URL="http://localhost:8080/health"
 ```
@@ -113,21 +113,21 @@ BUILDER_HEALTH_URL="http://localhost:8080/health"
 
 ### intmax_builder_uptime_seconds
 
-**Type:** Gauge
+**タイプ:** Gauge
 
-**Description:** Container uptime in seconds since last start.
+**説明:** 最後の起動からのコンテナ稼働時間（秒）。
 
-**Labels:**
-- `node`: Node name from configuration
+**ラベル:**
+- `node`: 設定からのノード名
 
-**Example:**
+**例:**
 ```
 intmax_builder_uptime_seconds{node="builder-01"} 86400
 ```
 
-**Usage:** Track container stability and detect unexpected restarts:
+**使用方法:** コンテナの安定性を追跡し、予期しない再起動を検出：
 ```promql
-# Detect containers restarted in last hour
+# 過去1時間以内に再起動したコンテナを検出
 intmax_builder_uptime_seconds < 3600
 ```
 
@@ -135,24 +135,24 @@ intmax_builder_uptime_seconds < 3600
 
 ### intmax_builder_data_size_bytes
 
-**Type:** Gauge
+**タイプ:** Gauge
 
-**Description:** Size of the Block Builder data directory in bytes.
+**説明:** Block Builderデータディレクトリのサイズ（バイト）。
 
-**Labels:**
-- `node`: Node name from configuration
+**ラベル:**
+- `node`: 設定からのノード名
 
-**Example:**
+**例:**
 ```
 intmax_builder_data_size_bytes{node="builder-01"} 5368709120
 ```
 
-**Usage:** Monitor disk usage growth:
+**使用方法:** ディスク使用量の増加を監視：
 ```promql
-# Data size in GB
+# GBでのデータサイズ
 intmax_builder_data_size_bytes / 1024 / 1024 / 1024
 
-# Growth rate per day
+# 1日あたりの増加率
 rate(intmax_builder_data_size_bytes[1d])
 ```
 
@@ -160,45 +160,45 @@ rate(intmax_builder_data_size_bytes[1d])
 
 ### intmax_builder_last_scrape
 
-**Type:** Gauge
+**タイプ:** Gauge
 
-**Description:** Unix timestamp of the last metrics collection.
+**説明:** 最後のメトリクス収集のUnixタイムスタンプ。
 
-**Labels:**
-- `node`: Node name from configuration
+**ラベル:**
+- `node`: 設定からのノード名
 
-**Example:**
+**例:**
 ```
 intmax_builder_last_scrape{node="builder-01"} 1704067200
 ```
 
-**Usage:** Detect stale metrics:
+**使用方法:** 古いメトリクスを検出：
 ```promql
-# Metrics older than 5 minutes
+# 5分以上古いメトリクス
 time() - intmax_builder_last_scrape > 300
 ```
 
 ---
 
-## Wallet Exporter Metrics
+## Wallet Exporterメトリクス
 
-These metrics are collected by the `wallet-exporter` service from the Scroll blockchain.
+これらのメトリクスは、`wallet-exporter`サービスによってScrollブロックチェーンから収集されます。
 
 ### intmax_wallet_eth
 
-**Type:** Gauge
+**タイプ:** Gauge
 
-**Description:** ETH balance of a wallet on Scroll network (for gas fees).
+**説明:** Scrollネットワーク上のウォレットETH残高（ガス代用）。
 
-**Labels:**
-- `wallet`: Wallet address (0x...)
+**ラベル:**
+- `wallet`: ウォレットアドレス（0x...）
 
-**Example:**
+**例:**
 ```
 intmax_wallet_eth{wallet="0x1234...abcd"} 0.0542
 ```
 
-**Alert Example:**
+**アラート例:**
 ```yaml
 - alert: INTMAXWalletLowBalance
   expr: intmax_wallet_eth < 0.001
@@ -211,14 +211,14 @@ intmax_wallet_eth{wallet="0x1234...abcd"} 0.0542
 
 ### intmax_wallet_sitx
 
-**Type:** Gauge
+**タイプ:** Gauge
 
-**Description:** sITX token balance of a wallet on Scroll network.
+**説明:** Scrollネットワーク上のウォレットsITXトークン残高。
 
-**Labels:**
-- `wallet`: Wallet address (0x...)
+**ラベル:**
+- `wallet`: ウォレットアドレス（0x...）
 
-**Example:**
+**例:**
 ```
 intmax_wallet_sitx{wallet="0x1234...abcd"} 1523.456
 ```
@@ -227,11 +227,11 @@ intmax_wallet_sitx{wallet="0x1234...abcd"} 1523.456
 
 ### intmax_wallet_sitx_total
 
-**Type:** Gauge
+**タイプ:** Gauge
 
-**Description:** Total sITX balance across all monitored wallets.
+**説明:** すべての監視対象ウォレットの合計sITX残高。
 
-**Example:**
+**例:**
 ```
 intmax_wallet_sitx_total 4521.789
 ```
@@ -240,37 +240,37 @@ intmax_wallet_sitx_total 4521.789
 
 ### intmax_wallet_last_check
 
-**Type:** Gauge
+**タイプ:** Gauge
 
-**Description:** Unix timestamp of the last wallet balance check.
+**説明:** 最後のウォレット残高チェックのUnixタイムスタンプ。
 
-**Example:**
+**例:**
 ```
 intmax_wallet_last_check 1704067200
 ```
 
-**Usage:** Detect stale wallet data:
+**使用方法:** 古いウォレットデータを検出：
 ```promql
-# No update in last 2 hours
+# 過去2時間更新なし
 time() - intmax_wallet_last_check > 7200
 ```
 
 ---
 
-## Reward Exporter Metrics
+## Reward Exporterメトリクス
 
-These metrics are collected by the `reward-exporter` service via SSH to each node.
+これらのメトリクスは、`reward-exporter`サービスによって各ノードへのSSH経由で収集されます。
 
 ### intmax_builder_reward_eth
 
-**Type:** Gauge
+**タイプ:** Gauge
 
-**Description:** Pending ETH rewards on a node (unclaimed).
+**説明:** ノード上の保留中ETH報酬（未請求）。
 
-**Labels:**
-- `node`: Node name from configuration
+**ラベル:**
+- `node`: 設定からのノード名
 
-**Example:**
+**例:**
 ```
 intmax_builder_reward_eth{node="builder-01"} 0.0123
 ```
@@ -279,14 +279,14 @@ intmax_builder_reward_eth{node="builder-01"} 0.0123
 
 ### intmax_builder_reward_sitx
 
-**Type:** Gauge
+**タイプ:** Gauge
 
-**Description:** Pending sITX rewards on a node (unclaimed).
+**説明:** ノード上の保留中sITX報酬（未請求）。
 
-**Labels:**
-- `node`: Node name from configuration
+**ラベル:**
+- `node`: 設定からのノード名
 
-**Example:**
+**例:**
 ```
 intmax_builder_reward_sitx{node="builder-01"} 456.789
 ```
@@ -295,11 +295,11 @@ intmax_builder_reward_sitx{node="builder-01"} 456.789
 
 ### intmax_builder_reward_total_eth
 
-**Type:** Gauge
+**タイプ:** Gauge
 
-**Description:** Total pending ETH rewards across all nodes.
+**説明:** すべてのノードの合計保留中ETH報酬。
 
-**Example:**
+**例:**
 ```
 intmax_builder_reward_total_eth 0.0567
 ```
@@ -308,11 +308,11 @@ intmax_builder_reward_total_eth 0.0567
 
 ### intmax_builder_reward_total_sitx
 
-**Type:** Gauge
+**タイプ:** Gauge
 
-**Description:** Total pending sITX rewards across all nodes.
+**説明:** すべてのノードの合計保留中sITX報酬。
 
-**Example:**
+**例:**
 ```
 intmax_builder_reward_total_sitx 1234.567
 ```
@@ -321,23 +321,23 @@ intmax_builder_reward_total_sitx 1234.567
 
 ### intmax_builder_reward_check_success
 
-**Type:** Gauge
+**タイプ:** Gauge
 
-**Description:** Indicates if the last reward check was successful.
+**説明:** 最後の報酬チェックが成功したかどうかを示す。
 
-**Values:**
-- `1`: Check succeeded
-- `0`: Check failed
+**値:**
+- `1`: チェック成功
+- `0`: チェック失敗
 
-**Labels:**
-- `node`: Node name from configuration
+**ラベル:**
+- `node`: 設定からのノード名
 
-**Example:**
+**例:**
 ```
 intmax_builder_reward_check_success{node="builder-01"} 1
 ```
 
-**Alert Example:**
+**アラート例:**
 ```yaml
 - alert: INTMAXRewardCheckStale
   expr: intmax_builder_reward_check_success == 0
@@ -350,97 +350,97 @@ intmax_builder_reward_check_success{node="builder-01"} 1
 
 ### intmax_builder_reward_last_check
 
-**Type:** Gauge
+**タイプ:** Gauge
 
-**Description:** Unix timestamp of the last reward balance check.
+**説明:** 最後の報酬残高チェックのUnixタイムスタンプ。
 
-**Labels:**
-- `node`: Node name from configuration
+**ラベル:**
+- `node`: 設定からのノード名
 
-**Example:**
+**例:**
 ```
 intmax_builder_reward_last_check{node="builder-01"} 1704067200
 ```
 
 ---
 
-## PromQL Query Examples
+## PromQLクエリ例
 
-### Dashboard Queries
+### ダッシュボードクエリ
 
-**Total Nodes Up:**
+**稼働中のノード総数:**
 ```promql
 count(intmax_builder_up == 1)
 ```
 
-**Percentage of Healthy Nodes:**
+**正常なノードの割合:**
 ```promql
 (count(intmax_builder_container_running == 1) / count(intmax_builder_up)) * 100
 ```
 
-**Total Pending Rewards (ETH + sITX in ETH equivalent):**
+**合計保留中報酬（ETH + sITXをETH換算）:**
 ```promql
 intmax_builder_reward_total_eth + (intmax_builder_reward_total_sitx * <sitx_price_in_eth>)
 ```
 
-**Average Container Uptime:**
+**平均コンテナ稼働時間:**
 ```promql
-avg(intmax_builder_uptime_seconds) / 3600  # in hours
+avg(intmax_builder_uptime_seconds) / 3600  # 時間単位
 ```
 
-**Data Growth Rate (GB/day):**
+**データ増加率（GB/日）:**
 ```promql
 rate(intmax_builder_data_size_bytes[1d]) / 1024 / 1024 / 1024
 ```
 
-### Alerting Queries
+### アラートクエリ
 
-**Nodes Down for More Than 10 Minutes:**
+**10分以上停止しているノード:**
 ```promql
 intmax_builder_container_running == 0
 ```
 
-**Low Gas Balance:**
+**ガス残高不足:**
 ```promql
 intmax_wallet_eth < 0.001
 ```
 
-**High Unclaimed Rewards:**
+**未請求報酬が多い:**
 ```promql
 intmax_builder_reward_eth > 0.1
 ```
 
-**Stale Metrics (No Update in 5 min):**
+**古いメトリクス（5分間更新なし）:**
 ```promql
 time() - intmax_builder_last_scrape > 300
 ```
 
 ---
 
-## Custom Metrics
+## カスタムメトリクス
 
-You can add custom metrics by modifying the `intmax_builder_metrics.sh` script:
+`intmax_builder_metrics.sh`スクリプトを変更してカスタムメトリクスを追加できます：
 
 ```bash
-# Example: Add memory usage metric
+# 例：メモリ使用量メトリクスを追加
 MEMORY_USAGE=$(docker stats --no-stream --format "{{.MemUsage}}" $CONTAINER_NAME | cut -d'/' -f1)
 echo "intmax_builder_memory_bytes{node=\"$NODE_NAME\"} $MEMORY_BYTES" >> "$TEXTFILE_PATH"
 ```
 
-After modifying, the new metrics will be available on the next cron execution.
+変更後、新しいメトリクスは次のcron実行時に利用可能になります。
 
 ---
 
-## Grafana Dashboard Variables
+## Grafanaダッシュボード変数
 
-The default dashboard uses these Prometheus queries for template variables:
+デフォルトのダッシュボードはテンプレート変数に以下のPrometheusクエリを使用：
 
-**Node Selection:**
+**ノード選択:**
 ```promql
 label_values(intmax_builder_up, node)
 ```
 
-**Wallet Selection:**
+**ウォレット選択:**
 ```promql
 label_values(intmax_wallet_eth, wallet)
 ```

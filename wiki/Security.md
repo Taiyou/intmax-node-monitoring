@@ -1,206 +1,206 @@
-# Security Best Practices
+# セキュリティベストプラクティス
 
-This document outlines security recommendations for operating the INTMAX Node Monitoring system.
+このドキュメントでは、INTMAX Node Monitoringシステムを運用する際のセキュリティ推奨事項を説明します。
 
-## Overview
+## 概要
 
-The monitoring system handles sensitive information including:
-- SSH keys for node access
-- Wallet addresses
-- spend-key files for reward claiming
-- Network topology information
+監視システムは以下の機密情報を扱います：
+- ノードアクセス用のSSH鍵
+- ウォレットアドレス
+- 報酬請求用のspend-keyファイル
+- ネットワークトポロジー情報
 
-Follow these guidelines to minimize security risks.
+これらのガイドラインに従ってセキュリティリスクを最小限に抑えてください。
 
 ---
 
-## File Permissions
+## ファイル権限
 
-### Configuration Files
+### 設定ファイル
 
 ```bash
-# .env file (contains sensitive configuration)
+# .envファイル（機密設定を含む）
 chmod 600 server/.env
 chown $USER:$USER server/.env
 
-# SSH private key
+# SSH秘密鍵
 chmod 600 ~/.ssh/id_ed25519
 chown $USER:$USER ~/.ssh/id_ed25519
 
-# spend-key file on nodes
+# ノード上のspend-keyファイル
 sudo chmod 644 /etc/intmax-builder/spend-key
 sudo chown root:root /etc/intmax-builder/spend-key
 ```
 
-### Docker Socket
+### Dockerソケット
 
-Restrict Docker socket access to necessary users only:
+Dockerソケットへのアクセスを必要なユーザーのみに制限：
 
 ```bash
-# Check current permissions
+# 現在の権限を確認
 ls -la /var/run/docker.sock
 
-# Only add trusted users to docker group
+# 信頼できるユーザーのみをdockerグループに追加
 sudo usermod -aG docker <username>
 ```
 
 ---
 
-## Network Security
+## ネットワークセキュリティ
 
-### Firewall Configuration
+### ファイアウォール設定
 
-Configure firewall rules to restrict access:
+ファイアウォールルールを設定してアクセスを制限：
 
 ```bash
-# Allow only monitoring server to scrape metrics
+# 監視サーバーからのみメトリクス取得を許可
 sudo ufw allow from <monitoring-server-ip> to any port 9100
 
-# Restrict Grafana access (optional - internal network only)
+# Grafanaアクセスを制限（オプション - 内部ネットワークのみ）
 sudo ufw allow from 192.168.0.0/16 to any port 3000
 
-# Deny public access to Prometheus
+# Prometheusへの公開アクセスを拒否
 sudo ufw deny 9090
 ```
 
-### Recommended Firewall Rules
+### 推奨ファイアウォールルール
 
-| Port | Service | Recommendation |
-|------|---------|----------------|
-| 9100 | node_exporter | Allow only from monitoring server IP |
-| 9090 | Prometheus | Internal access only (not public) |
-| 3000 | Grafana | Internal network or VPN only |
-| 22 | SSH | Key-based auth only, consider changing port |
+| ポート | サービス | 推奨設定 |
+|--------|----------|----------|
+| 9100 | node_exporter | 監視サーバーIPからのみ許可 |
+| 9090 | Prometheus | 内部アクセスのみ（公開しない） |
+| 3000 | Grafana | 内部ネットワークまたはVPNのみ |
+| 22 | SSH | 鍵認証のみ、ポート変更を検討 |
 
-### SSH Hardening
+### SSHハードニング
 
-Edit `/etc/ssh/sshd_config`:
+`/etc/ssh/sshd_config`を編集：
 
 ```bash
-# Disable password authentication
+# パスワード認証を無効化
 PasswordAuthentication no
 
-# Allow only specific users
+# 特定のユーザーのみ許可
 AllowUsers your-username
 
-# Disable root login
+# rootログインを無効化
 PermitRootLogin no
 
-# Use SSH protocol 2 only
+# SSHプロトコル2のみ使用
 Protocol 2
 ```
 
-Restart SSH service:
+SSHサービスを再起動：
 ```bash
 sudo systemctl restart sshd
 ```
 
 ---
 
-## Credential Management
+## 認証情報管理
 
-### Environment Variables
+### 環境変数
 
-Never commit sensitive data to version control:
+機密データをバージョン管理にコミットしない：
 
 ```bash
-# .gitignore should include:
+# .gitignoreに含めるべき項目：
 .env
 server/.env
 prometheus/targets/builders.yml
 scripts/claim_config.env
 ```
 
-### SSH Key Management
+### SSH鍵管理
 
-1. **Use ED25519 keys** (more secure than RSA):
+1. **ED25519鍵を使用**（RSAより安全）：
    ```bash
    ssh-keygen -t ed25519 -C "monitoring-server"
    ```
 
-2. **Separate keys for different purposes**:
-   - One key for monitoring (read-only operations)
-   - One key for reward claiming (if automated)
+2. **目的別に鍵を分離**：
+   - 監視用の鍵（読み取り専用操作）
+   - 報酬請求用の鍵（自動化する場合）
 
-3. **Limit SSH key usage**:
-   On nodes, you can restrict what commands an SSH key can run by editing `~/.ssh/authorized_keys`:
+3. **SSH鍵の使用を制限**：
+   ノード上で、`~/.ssh/authorized_keys`を編集してSSH鍵が実行できるコマンドを制限：
    ```bash
    command="cd /home/user/intmax2/cli && ./target/release/intmax2-cli balance --private-key $(cat /etc/intmax-builder/spend-key)",no-port-forwarding,no-X11-forwarding ssh-ed25519 AAAA... monitoring-key
    ```
 
-### spend-key Security
+### spend-keyのセキュリティ
 
-The spend-key is used for:
-- Checking reward balances
-- Claiming rewards
+spend-keyは以下に使用されます：
+- 報酬残高の確認
+- 報酬の請求
 
-It **cannot** be used to:
-- Transfer funds from your wallet
-- Access other accounts
+以下には使用**できません**：
+- ウォレットからの資金移動
+- 他のアカウントへのアクセス
 
-However, protect it because:
-- Anyone with the key can claim rewards
-- It reveals your wallet association
+ただし、以下の理由で保護が必要です：
+- 鍵を持つ人は誰でも報酬を請求できる
+- ウォレットとの関連が明らかになる
 
-**Recommendations:**
-1. Store in `/etc/intmax-builder/` with restricted permissions
-2. Don't include in backups that leave the server
-3. Rotate if you suspect compromise
+**推奨事項：**
+1. `/etc/intmax-builder/`に制限された権限で保存
+2. サーバー外に出るバックアップに含めない
+3. 漏洩の疑いがある場合はローテーション
 
 ---
 
-## Docker Security
+## Dockerセキュリティ
 
-### Run Containers as Non-Root
+### コンテナを非rootで実行
 
-The exporters in this project run as non-root by default. Verify with:
+このプロジェクトのexporterはデフォルトで非rootとして実行されます。以下で確認：
 
 ```bash
 docker compose exec wallet-exporter whoami
 ```
 
-### Limit Container Capabilities
+### コンテナ機能を制限
 
-The `docker-compose.yml` already limits capabilities. Do not modify these unless necessary:
+`docker-compose.yml`はすでに機能を制限しています。必要でない限り変更しないでください：
 
 ```yaml
 security_opt:
   - no-new-privileges:true
 ```
 
-### Use Read-Only Volumes Where Possible
+### 可能な限り読み取り専用ボリュームを使用
 
 ```yaml
 volumes:
-  - ./config:/config:ro  # Read-only mount
+  - ./config:/config:ro  # 読み取り専用マウント
 ```
 
 ---
 
-## Monitoring Security
+## 監視セキュリティ
 
-### Grafana Security
+### Grafanaセキュリティ
 
-1. **Change default password immediately**:
+1. **デフォルトパスワードを即座に変更**：
    ```bash
-   # In .env
+   # .envで設定
    GRAFANA_ADMIN_PASSWORD=your-strong-password
    ```
 
-2. **Enable HTTPS** (recommended for production):
-   Use a reverse proxy (nginx, Traefik) with SSL certificates.
+2. **HTTPSを有効化**（本番環境で推奨）：
+   リバースプロキシ（nginx、Traefik）とSSL証明書を使用。
 
-3. **Disable anonymous access**:
-   Already disabled by default in this configuration.
+3. **匿名アクセスを無効化**：
+   この設定ではデフォルトで無効になっています。
 
-### Prometheus Security
+### Prometheusセキュリティ
 
-1. **Don't expose Prometheus publicly**:
-   Prometheus has no built-in authentication. Keep it internal.
+1. **Prometheusを公開しない**：
+   Prometheusには組み込みの認証がありません。内部に保持してください。
 
-2. **Use a reverse proxy** if external access is needed:
+2. **外部アクセスが必要な場合はリバースプロキシを使用**：
    ```nginx
-   # Example nginx configuration
+   # nginx設定例
    location /prometheus/ {
        auth_basic "Prometheus";
        auth_basic_user_file /etc/nginx/.htpasswd;
@@ -210,100 +210,100 @@ volumes:
 
 ---
 
-## Backup Security
+## バックアップセキュリティ
 
-### What to Backup
+### バックアップ対象
 
-| Item | Location | Sensitivity |
-|------|----------|-------------|
-| Grafana dashboards | `grafana/dashboards/` | Low |
-| Prometheus data | Docker volume `prom_data` | Medium |
-| Configuration | `.env`, `builders.yml` | High |
-| SSH keys | `~/.ssh/` | **Critical** |
+| 項目 | 場所 | 機密度 |
+|------|------|--------|
+| Grafanaダッシュボード | `grafana/dashboards/` | 低 |
+| Prometheusデータ | Dockerボリューム `prom_data` | 中 |
+| 設定 | `.env`, `builders.yml` | 高 |
+| SSH鍵 | `~/.ssh/` | **重要** |
 
-### Backup Recommendations
+### バックアップ推奨事項
 
-1. **Encrypt backups** before storing off-site
-2. **Don't backup** spend-key files unless necessary
-3. **Test restoration** periodically
+1. オフサイトに保存する前に**バックアップを暗号化**
+2. 必要でない限りspend-keyファイルを**バックアップしない**
+3. 定期的に**復元をテスト**
 
 ```bash
-# Example: encrypted backup
+# 例：暗号化バックアップ
 tar -czf - server/.env prometheus/targets/ | gpg -c > backup-$(date +%Y%m%d).tar.gz.gpg
 ```
 
 ---
 
-## Incident Response
+## インシデント対応
 
-### If SSH Key is Compromised
+### SSH鍵が漏洩した場合
 
-1. **Immediately** regenerate the key:
+1. **即座に**鍵を再生成：
    ```bash
    ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N ""
    ```
 
-2. Remove old key from all nodes:
+2. すべてのノードから古い鍵を削除：
    ```bash
-   # On each node, edit authorized_keys
+   # 各ノードでauthorized_keysを編集
    nano ~/.ssh/authorized_keys
-   # Remove the compromised key line
+   # 漏洩した鍵の行を削除
    ```
 
-3. Add new key to all nodes
+3. 新しい鍵をすべてのノードに追加
 
-### If spend-key is Compromised
+### spend-keyが漏洩した場合
 
-1. **Claim all pending rewards immediately**:
+1. **即座に保留中のすべての報酬を請求**：
    ```bash
    ./intmax2-cli claim --private-key 0xYOUR_SPEND_KEY
    ```
 
-2. Rewards are sent to your registered wallet (which requires a different key to access)
+2. 報酬は登録されたウォレットに送られます（アクセスには別の鍵が必要）
 
-3. Generate a new spend-key through INTMAX CLI
+3. INTMAX CLIで新しいspend-keyを生成
 
-### If Monitoring Server is Compromised
+### 監視サーバーが侵害された場合
 
-1. Stop all services immediately:
+1. すべてのサービスを即座に停止：
    ```bash
    docker compose down
    ```
 
-2. Rotate all SSH keys
+2. すべてのSSH鍵をローテーション
 
-3. Change Grafana password
+3. Grafanaパスワードを変更
 
-4. Review access logs:
+4. アクセスログを確認：
    ```bash
    docker compose logs > incident-logs.txt
    ```
 
-5. Rebuild from clean installation
+5. クリーンインストールから再構築
 
 ---
 
-## Security Checklist
+## セキュリティチェックリスト
 
-Before deploying to production:
+本番環境にデプロイする前に：
 
-- [ ] Changed default Grafana password
-- [ ] Configured firewall rules
-- [ ] SSH key-based authentication only
-- [ ] `.env` file has restricted permissions (600)
-- [ ] Prometheus not exposed publicly
-- [ ] Docker socket access restricted
-- [ ] spend-key files have appropriate permissions
-- [ ] Backup strategy in place
-- [ ] Monitoring server on a separate network segment (if possible)
+- [ ] デフォルトのGrafanaパスワードを変更
+- [ ] ファイアウォールルールを設定
+- [ ] SSH鍵認証のみ
+- [ ] `.env`ファイルの権限を制限（600）
+- [ ] Prometheusを公開しない
+- [ ] Dockerソケットアクセスを制限
+- [ ] spend-keyファイルに適切な権限
+- [ ] バックアップ戦略を策定
+- [ ] 監視サーバーを別のネットワークセグメントに配置（可能であれば）
 
 ---
 
-## Reporting Security Issues
+## セキュリティ問題の報告
 
-If you discover a security vulnerability in this project:
+このプロジェクトでセキュリティ脆弱性を発見した場合：
 
-1. **Do not** open a public GitHub issue
-2. Contact the maintainer directly
-3. Provide details about the vulnerability
-4. Allow time for a fix before public disclosure
+1. 公開GitHubイシューを**開かない**
+2. メンテナーに直接連絡
+3. 脆弱性の詳細を提供
+4. 公開前に修正の時間を確保
